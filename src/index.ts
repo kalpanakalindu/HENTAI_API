@@ -880,7 +880,27 @@ app.get("/api/oppai/watch/:id", async (c) => {
     }
 });
 
+app.get("/proxy", async (c) => {
+  const url = c.req.query("url");
+  if (!url || !/^https:\/\/([a-z0-9-]+\.)*myspacecat\.pictures\//i.test(url))
+    return c.text("blocked", 400);
 
+  const headers: Record<string, string> = {
+    Referer: "https://oppai.stream/",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  };
+  const range = c.req.header("range");
+  if (range) headers.Range = range;
+
+  const up = await fetch(encodeURI(decodeURI(url)), { headers });
+  const h = new Headers();
+  for (const k of ["content-type", "content-length", "content-range", "accept-ranges"]) {
+    const v = up.headers.get(k);
+    if (v) h.set(k, v);
+  }
+  return new Response(up.body, { status: up.status, headers: h });
+});
 
 
 app.get("/api/hanime/search/:query", async (c) => {
